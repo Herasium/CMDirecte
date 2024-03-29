@@ -103,7 +103,7 @@ export async function valid_factor(choice, token) {
     }
 }
 
-export async function login_factor(user,password,cn,cv) {
+export async function login_factor(user, password, cn, cv) {
     const options = {
         method: "POST",
         headers: {
@@ -121,7 +121,7 @@ export async function login_factor(user,password,cn,cv) {
             "x-token": "d7869dfc-295f-433d-99bf-76eb5eb1fe8b",
         },
         body: new URLSearchParams({
-            data: '{    "identifiant": "'+user+'",    "motdepasse": "'+password+'",    "isReLogin": false,    "cn": "'+cn+'",    "cv": "'+cv+'",    "uuid": "",    "fa": [        {            "cn": "'+cn+'",            "cv": "'+cv+'"        }    ]}',
+            data: '{    "identifiant": "' + user + '",    "motdepasse": "' + password + '",    "isReLogin": false,    "cn": "' + cn + '",    "cv": "' + cv + '",    "uuid": "",    "fa": [        {            "cn": "' + cn + '",            "cv": "' + cv + '"        }    ]}',
         }),
     };
 
@@ -135,5 +135,76 @@ export async function login_factor(user,password,cn,cv) {
     } catch (err) {
         console.error(err);
         return null; // or handle the error in your preferred way
+    }
+}
+
+export async function get_all_homeworks(token) {
+    const options = {
+        method: 'POST',
+        headers: {
+            accept: 'application/json, text/plain, */*',
+            'accept-language': 'en,en-US;q=0.9,fr-FR;q=0.8,fr;q=0.7',
+            'content-type': 'application/x-www-form-urlencoded',
+            dnt: '1',
+            origin: 'https://www.ecoledirecte.com',
+            referer: 'https://www.ecoledirecte.com/',
+            'sec-ch-ua': '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
+            'sec-ch-ua-mobile': '?1',
+            'sec-ch-ua-platform': '"Android"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-site',
+            'user-agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.36',
+            'x-token': token
+        },
+        body: new URLSearchParams({ data: '{}' })
+    };
+
+    try {
+        const response = await fetch(
+            "https://api.ecoledirecte.com/v3/Eleves/14108/cahierdetexte.awp?verbe=get&v=4.53.4",
+            options,
+        );
+        const data = await response.json();
+        return data;
+    } catch (err) {
+        console.error(err);
+        return null; // or handle the error in your preferred way
+    }
+}
+
+
+export async function get_homework(date, token) {
+    const options = {
+        method: 'POST',
+        headers: {
+            accept: 'application/json, text/plain, */*',
+            'accept-language': 'en,en-US;q=0.9,fr-FR;q=0.8,fr;q=0.7',
+            'content-type': 'application/x-www-form-urlencoded',
+            dnt: '1',
+            origin: 'https://www.ecoledirecte.com',
+            referer: 'https://www.ecoledirecte.com/',
+            'sec-ch-ua': '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
+            'sec-ch-ua-mobile': '?1',
+            'sec-ch-ua-platform': '"Android"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-site',
+            'user-agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.36',
+            'x-token': token
+        },
+        body: new URLSearchParams({ data: '{}' })
+    };
+
+    try {
+        const response = await fetch(
+            "https://api.ecoledirecte.com/v3/Eleves/14108/cahierdetexte/" + date + ".awp?verbe=get&v=4.53.4",
+            options,
+        );
+        const data = await response.json();
+        return data;
+    } catch (err) {
+        console.error(err);
+        return null;
     }
 }

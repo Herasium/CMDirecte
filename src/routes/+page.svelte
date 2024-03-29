@@ -2,7 +2,9 @@
     import { onMount } from "svelte";
     import Cookies from "js-cookie";
     import { get } from "svelte/store";
-    import { login, login_factor, factor, valid_factor} from "$lib/api"
+    import { login, login_factor, factor, valid_factor, get_all_homeworks, get_homework} from "$lib/api"
+    import removeMarkdown from "markdown-to-text";
+    import { marked } from "marked";
 
     let messages = [
         "Welcome to CMDirecte, a weird Ecole Directe client I made !",
@@ -118,9 +120,38 @@
             if (request[0] == "help") {
                 print("Current commands:")
                 print("help")
-            } else {
+                print("homework")
+                print("disconnect")
+            } else if (request[0] == "homework") {
+                if (request[1] == undefined) {
+                    let homework = await get_all_homeworks(token)
+                    for (let devoir in homework["data"]) {
+                        print(devoir+": ")
+                        for (let matiere in homework["data"][devoir]) {
+                            messages[messages.length - 1] = messages[messages.length - 1] + homework["data"][devoir][matiere]["matiere"].toLowerCase() + " "
+                        }
+                    }
+                } else {
+                    const data = await get_homework(request[1],token)
+                    print(request[1]+":")
+                    for (let matiere in data["data"]["matieres"]) {
+                        if ("aFaire" in data["data"]["matieres"][matiere]){
+                            print(data["data"]["matieres"][matiere]["matiere"])
+                            let todo = removeMarkdown(atob(data["data"]["matieres"][matiere]["aFaire"]["contenu"]));
+                            //todo = marked.parse(todo)
+                            print(todo)
+                        }  
+                    }
+                }
+            } else if (request[0] == "disconnect") {
+                sessionStorage.removeItem("ed-token")
+                sessionStorage.removeItem("ed-acc-data")
+                location.reload();
+            }
+            else {
                 print("Unknown command, type help for help.")
             }
+            window.scrollTo(0, document.body.scrollHeight)
         }
     });
 </script>
