@@ -1,91 +1,22 @@
 <script>
     import { onMount } from "svelte";
-    import Cookies from 'js-cookie';
+    import Cookies from "js-cookie";
     import { get } from "svelte/store";
+    import { login, login_factor, factor, valid_factor} from "$lib/api"
 
     let messages = [
         "Welcome to CMDirecte, a weird Ecole Directe client I made !",
         "Username?",
     ];
 
-    function print (message) {
-        messages.push(message)
-        messages=messages
+    function print(message) {
+        messages.push(message);
+        messages = messages;
     }
 
-    async function login(user, password) {
-        const options = {
-            method: "POST",
-            headers: {
-                accept: "application/json, text/plain, */*",
-                "accept-language": "en,en-US;q=0.9,fr-FR;q=0.8,fr;q=0.7",
-                "content-type": "application/x-www-form-urlencoded",
-                dnt: "1",
-                origin: "https://www.ecoledirecte.com",
-                referer: "https://www.ecoledirecte.com/",
-                "user-agent":
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-            },
-            body: new URLSearchParams({
-                data:
-                    '{    "identifiant": "' +
-                    user +
-                    '",    "motdepasse": "' +
-                    password +
-                    '",    "isReLogin": false,    "uuid": "",    "fa": []}',
-            }),
-        };
 
-        try {
-            const response = await fetch(
-                "https://api.ecoledirecte.com/v3/login.awp?v=4.53.4",
-                options,
-            );
-            const data = await response.json();
-            return data.token;
-        } catch (err) {
-            console.error(err);
-            return null; // or handle the error in your preferred way
-        }
-    }
-
-    async function factor(token) {
-        const options = {
-            method: "POST",
-            headers: {
-                accept: "application/json, text/plain, */*",
-                "accept-language": "en,en-US;q=0.9,fr-FR;q=0.8,fr;q=0.7",
-                "content-type": "application/x-www-form-urlencoded",
-                dnt: "1",
-                origin: "https://www.ecoledirecte.com",
-                referer: "https://www.ecoledirecte.com/",
-                "sec-ch-ua":
-                    '"Google Chrome";v="123", "Not:A-Brand";v="8", "Chromium";v="123"',
-                "sec-ch-ua-mobile": "?0",
-                "sec-ch-ua-platform": '"Windows"',
-                "sec-fetch-dest": "empty",
-                "sec-fetch-mode": "cors",
-                "sec-fetch-site": "same-site",
-                "user-agent":
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                "x-token": token,
-            },
-            body: new URLSearchParams({ data: "{}" }),
-        };
-        try {
-            const response = await fetch(
-                "https://api.ecoledirecte.com/v3/connexion/doubleauth.awp?verbe=get&v=4.53.4",
-                options,
-            );
-            const data = await response.json();
-            return data;
-        } catch (err) {
-            console.error(err);
-            return null; // or handle the error in your preferred way
-        }
-    }
     function get_typed(password) {
-        print("")
+        print("");
         let pressed_key = "";
         let finished = false;
 
@@ -131,22 +62,66 @@
         });
     }
 
+    function clear_screen() {
+        messages = []
+    }
+
+    async function wait(milliseconds) {
+        return new Promise(resolve => {
+            setTimeout(resolve, milliseconds);
+        });
+    }
+
     let user = "";
     let password = "";
     let temp_token = "";
     let token = "";
+    let acc_data 
 
     onMount(async () => {
-        user = await get_typed(false);
-        print("Password?");
-        password = await get_typed(true);
-        temp_token = await login(user, password);
-        const second_data = await factor(temp_token)
-        print(atob(second_data["data"]["question"]))
-        for (let choice in second_data["data"]["propositions"]) {
-            print(atob(second_data["data"]["propositions"][choice]))
+        console.log(sessionStorage.getItem("ed-token"))
+        if (sessionStorage.getItem('ed-token') == undefined) {
+            user = await get_typed(false);
+            print("Password?");
+            password = await get_typed(true);
+            temp_token = await login(user, password);
+            const second_data = await factor(temp_token);
+            print("Second Factor Question: "+atob(second_data["data"]["question"]));
+            for (let choice in second_data["data"]["propositions"]) {
+                print(atob(second_data["data"]["propositions"][choice]));
+            }
+            let choix = await get_typed();
+            const factor_token = await valid_factor(btoa(choix), temp_token);
+            const login_data = await login_factor(user,password,factor_token["data"]["cn"],factor_token["data"]["cv"])
+            token = login_data["token"]
+            acc_data = login_data["data"]["accounts"][0]
+            const json_acc = JSON.stringify(acc_data)
+            sessionStorage.setItem("ed-acc-data",json_acc)
+            sessionStorage.setItem("ed-token",token)
+            clear_screen()
+            await wait(1000)
+            print("Welcome "+acc_data["prenom"])
+        } else {
+            token = sessionStorage.getItem('ed-token')
+            acc_data = JSON.parse(sessionStorage.getItem('ed-acc-data'))
+            clear_screen()
+            print("Loading from previous token.")
+            wait(1000)
+            clear_screen()
+            print("Welcome Back "+acc_data["prenom"])
         }
-        let choix = await get_typed()
+        print(acc_data["nomEtablissement"])
+        print(acc_data["profile"]["classe"]["libelle"])
+        while (true) {
+            let request = await get_typed(false)
+            request = request.split(" ")
+            if (request[0] == "help") {
+                print("Current commands:")
+                print("help")
+            } else {
+                print("Unknown command, type help for help.")
+            }
+        }
     });
 </script>
 
@@ -160,7 +135,8 @@
     #container {
         top: 0;
         left: 0;
-        position: absolute;
+        position: fixed;
+        overflow: auto;
         width: 100%;
         height: 100%;
         background: black;
